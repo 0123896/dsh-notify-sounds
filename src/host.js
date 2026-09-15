@@ -10,10 +10,10 @@
  *     closes with no pending tool calls / steering).
  *
  *  2. 「需要手动确认 / user must confirm」 -> enqueue { kind: 'approval' }
- *     Events: `tools/pre-execute` when tool name is `ask_user_question`
- *            (fires when the question prompt is dispatched, i.e. the moment
- *            the user actually needs to act), plus `approval/request` and
- *            `user-questions/request` as fallbacks. If you use other
+ *     Event: `tools/pre-execute`. When its `next()` decides
+ *            `{ kind: 'ask' }` (the tool needs human approval) or the tool is
+ *            `ask_user_question`, the approval tone plays. `approval/request` /
+ *            `user-questions/request` remain as fallbacks. If you use other
  *            "confirmation" tools, list them in CONFIRM_TOOL_NAMES.
  *
  * The client half polls `notif-drain` (a package-private RPC) and plays a
@@ -41,13 +41,24 @@ return {
     })
 
     // ------------------------------------------------------------------
-    // 2) 需要手动确认（提问 / 审批）
-    //    `tools/pre-execute` is the most accurate timing: it fires when the
-    //    tool is dispatched, i.e. right when the question appears.
+    // 2) 需要手动确认 / 提问 / 审批
+    //    `tools/pre-execute` is the most reliable signal: it runs for EVERY tool
+    //    dispatch and its `next()` decides whether the tool is allowed, denied,
+    //    or needs user approval (`{ kind: 'ask' }`). So we play the approval tone
+    //    whenever a call ends up asking the user — either an explicit question
+    //    (ask_user_question) or a normal tool that requires human approval.
     // ------------------------------------------------------------------
-    ctx.on('tools/pre-execute', (exec, next) => {
-      if (exec && CONFIRM_TOOL_NAMES.has(exec.name)) enqueue('approval')
-      return next()
+    ctx.on('tools/pre-execute', async (exec, next) => {
+      let decision
+      try {
+        decision = await next()
+      } catch {
+        decision = undefined
+      }
+      const asked = !!decision && decision.kind === 'ask'
+      const isQuestion = !!(exec && CONFIRM_TOOL_NAMES.has(exec.name))
+      if (asked || isQuestion) enqueue('approval')
+      return decision
     })
     // Optional extra waterfalls that also signal a confirmation (some runtimes
     // reach them, some don't — the client dedupes, so duplicates are harmless).
