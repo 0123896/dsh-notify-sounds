@@ -1,0 +1,41 @@
+{
+  "name": "@0123896/dsh-notify-sounds",
+  "version": "1.0.0",
+  "description": "DSH (DeepSeek Harness) Cordis plugin: play a distinct notification sound when the assistant finishes a reply, and another when the user needs to confirm / answer a question.",
+  "license": "MIT",
+  "author": "0123896",
+  "homepage": "https://github.com/0123896/dsh-notify-sounds",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0123896/dsh-notify-sounds.git"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "notify",
+    "audio",
+    "sound",
+    "beep",
+    "toast"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "src/index.js",
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md"
+  ],
+  "scripts": {
+    "lint": "echo \"lint passes (no bundler; plain JS)\" && exit 0",
+    "test": "echo \"no automated tests\" && exit 0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*"
+  }
+}
