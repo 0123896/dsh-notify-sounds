@@ -28,8 +28,8 @@
 ## 是什么
 
 一个轻量、可移植的 **DeepSeek Harness（DSH）** 对话提示音插件，基于其动态
-Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**，让你不用一直盯着
-屏幕：
+Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**，让你不用一直
+盯着屏幕：
 
 - ✅ **对话结束 / 回复完成** → “结束”提示音（默认高音 beep，880 Hz）
 - 🚨 **提问 / 请求审批** → “确认”提示音（默认低音 beep，660 Hz）
@@ -40,7 +40,7 @@ Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**
 
 | 能力 | 原生 dsh web | 本插件 |
 | --- | --- | --- |
-| 对话结束提醒 | 无 | 回复完成即在响（`end`） |
+| 对话结束提醒 | 无 | 回复完成即响（`end`） |
 | 提问 / 审批提醒 | 无 | 请求确认时即响（`approval`） |
 | 自定义提示音 | — | 支持（URL / 本地文件） |
 | 内置音频 / 版权风险 | — | 无（默认 Web Audio 合成） |
@@ -55,7 +55,7 @@ Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**
 
 > 探测都发生在插件 **Host 端（事件检测）**，声音统一在**浏览器（client）**播放；
 > 两者通过插件私有 RPC：`host.call('notif-drain')`，客户端每 400 ms 轮询一次，
-> 并对同一类事件在短窗口内去重（`approval` 为 2.5s），避免多次。
+> 并对同一类事件在短窗口内去重（`approval` 为 2.5s），避免重复。
 
 ---
 
@@ -65,8 +65,8 @@ Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**
 
 | 场景 | 目的 | 你可听到 |
 | --- | --- | --- |
-| 我完成一次回复 / 处理完一轮  | 提醒你回来看 | 高音短促 beep（`end`） |
-| 依赖你回答、或某操作需要批准 | 提醒你处理 | 低音稍长 beep（`approval`） |
+| 我完成一次回复 / 处理完一轮 | 提醒你回来看 | 高音短促 beep（`end`） |
+| 需要你回答、或某操作需要批准 | 提醒你处理 | 低音稍长 beep（`approval`） |
 
 “需要确认”的判断，来自**工具执行前的审批决策**：当某个工具调用需要用户批准
 （决策为 `{ kind: 'ask' }`），或正是提问工具 `ask_user_question`，都会播放
@@ -76,38 +76,30 @@ Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**
 
 ## 快速上手
 
-两种方式任选其一，让插件在 DSH 里跑起来。
+插件**不需要安装到 npm**，用 DSH 的动态 Cordis 机制，在会话里直接粘入两个 body 即可：
 
-### 方式一：会话内载入（无安装、最快速）
+在运行中的 **DSH 会话**里，用 `cordis_define` 工具：
 
-在运行中的 **DSH 会话**里，用 `cordis_define` 粘贴两个 body（不用先安装任何包）：
+1. 打开仓库里的 **[`src/host.js`](src/host.js)**，把**全文**复制为 `code.host`。
+2. 打开 **[`src/client.js`](src/client.js)**，把**全文**复制为 `code.client`。
+3. 调用 `cordis_define`，再把返回的 `pluginId` / `packageId` 用 `cordis_run`（`mode=run`）激活。首次会在浏览器弹激活确认，如实批准。
 
-1. 打开 **[`src/host.js`](src/host.js)**，把全文复制为 `code.host`。
-2. 打开 **[`src/client.js`](src/client.js)**，把全文复制为 `code.client`。
-3. 调用 `cordis_define`，再 `cordis_run` 激活即可（首次会在浏览器弹激活确认，如实批准）。
+完整调用示例：
 
-### 方式二：安装预设（更省心，适合长期用）
-
-如果你希望**不用每次粘贴源码**、让它在多个会话里自动挂载，把本插件当作一个
-**可安装包 + Agent preset** 来用：
-
-```bash
-# 1) 安装插件包（已发布时用 npm install；本地开发用 npm link）
-npm install @0123896/dsh-notify-sounds   # 或：npm link
-
-# 2) 把 preset 放进你的用户预设目录
-#    把 preset/ 下的 agent.cordis.yml + preset.yml 复制到
-#    $DSH_HOME/.agent-presets/dsh-notify-sounds/   （$DSH_HOME 默认 ~/.dsh）
+```
+code: {
+  host:   <将 src/host.js 全文粘贴到这里>,
+  client: <将 src/client.js 全文粘贴到这里>,
+}
+name: "@0123896/dsh-notify-sounds"
+purpose: "会话结束 / 提问或审批时播放提示音"
+plugin: { kind: "new", idPrefix: "notif" }
 ```
 
-然后在 DSH 里选 “dsh-notify-sounds” 预设开局即可。
+> 说明：插件依赖 DSH 动态 Cordis 的 host/client 机制，需要“粘码”这两个 body，
+> 这也是目前唯一靠谱的安装方式；不涉及 npm、不用改源码。
 
-> 注意事项（重要）：这是一种“标准 Cordis 插件”（host 端）的安装方式。声音
-> 由**浏览器半（client）**负责，DSH 会在加载 preset 时负责把对应的 client
-> 一并挂进页面。若浏览器端未被挂载，host 端仍会正常做事件检测，只是不出声。
-> 若你不想碰 preset / npm，直接用**方式一**是最稳的路径。
-
-### 首次使用提示
+### 首次使用测试
 
 1. 激活成功后，让模型正常**回复一条消息** → 应听到“结束”音（`end`）。
 2. 触发一次**提问 / 审批** → 应听到“确认”音（`approval`）。
@@ -121,20 +113,22 @@ npm install @0123896/dsh-notify-sounds   # 或：npm link
 给 `apply` 传配置：
 
 ```js
-// 宿主侧（host）：监听本地声音文件，插件经由 webServer 以 /__dsh-notify/ 提供
+// host 侧：指定本地声音文件，插件经 webServer 以 /__dsh-notify/ 提供
 { endFilePath: 'C:/path/end.mp3', approvalFilePath: 'C:/path/approval.mp3' }
 
-// 浏览器侧（client）：直接用 URL 播放（file 或 http）
+// client 侧：直接用一个 URL 播放（file 或 http）
 { endUrl: '/__dsh-notify/end.mp3', approvalUrl: '/__dsh-notify/approval.mp3' }
 ```
 
-给了 `url` 就播文件，否则合成蜂鸣。不善配置时，可用下面的常改参数交给 client：
+给了 `url` 就播放文件，否则合成蜂鸣。改动后重启插件即可生效。
+
+不自定义时，常用参数交给 client：
 
 | Config | 默认 | 含义 |
 | --- | --- | --- |
-| `endFrequency` | `880` | “结束”音频率（Hz） |
+| `endFrequency` | `880` | “结束”音的频率（Hz） |
 | `endDurationMs` | `240` | “结束”音时长 |
-| `approvalFrequency` | `660` | “确认”音频率（Hz） |
+| `approvalFrequency` | `660` | “确认”音的频率（Hz） |
 | `approvalDurationMs` | `420` | “确认”音时长 |
 
 ---
@@ -144,25 +138,25 @@ npm install @0123896/dsh-notify-sounds   # 或：npm link
 **为什么提问没有立刻响？**
 浏览器可能拦截了自动播放，先在页面点一下；再确认插件已激活（`cordis_run` 成功）。
 
-**为什么“审批”和“提问”同一个音？**
+**为什么“审批”和“提问”是同一个音？**
 是刻意如此——都代表“需要你确认”，用同一段 `approval`，方便你形成记忆。
 
 **我能用别人的 MP3 吗？**
-可以，通过 `url` / `filePath` 指向你的文件；但**不要暴露在仓库里放有版权的音频**。
-默认的 Web Audio 蜂鸣无任何版权问题。
+可以，通过 `url` / `filePath` 指向你的文件；但**不要把有版权的音频随仓库分发**，
+避免侵权。默认的 Web Audio 蜂鸣无任何版权问题。
 
 **它会影响 DSH 本体吗？**
-不会。只用官方服务与私有 RPC，不修改源码、不注入其它 API。
+不会。它只靠官方动态插件机制（事件 + 私有 RPC），不修改源码、不侵入服务。
 
 ---
 
 ## 已知限制
 
 - 依赖**浏览器侧** Web Audio，受浏览器自动播放策略影响（首次需一次用户手势）。
-- **host 端**在受限沙箱：只能访问 `inject` 声明过的服务（本插件 host：
-  `fs`、`webServer`；client：`timer`）。
-- 同一类事件在短窗口内会**合并成一次**（去重），可能少打一次音（避免回响）。
-- 徽章依赖 shields.io 渲染，离线 / 无网络时徽章不显示（不影响功能）。
+- **host 端**在受限沙箱：只能访问 `inject` 声明过的服务（本插件 host：`fs`、
+  `webServer`；client：`timer`）。
+- 同一类事件在短窗口会**合并成一次**（去重），可能少打一次音（避免回响）。
+- 徽章依赖 shields.io 渲染，离线 / 无网络时不显示（不影响功能）。
 
 ---
 
