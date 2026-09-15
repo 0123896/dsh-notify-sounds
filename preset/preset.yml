@@ -1,0 +1,3 @@
+# Agent-preset metadata for @0123896/dsh-notify-sounds.
+name: dsh-notify-sounds (提示音)
+description: DSH 会话结束 / 提问或审批时播放提示音；以预先安装的插件形式挂载，无需粘贴源码。

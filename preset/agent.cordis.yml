@@ -1,0 +1,22 @@
+# @0123896/dsh-notify-sounds — agent preset (composition)
+#
+# Composes the notify-sounds plugin so a session started on this preset gets the
+# two notification sounds without pasting body strings into cordis_define.
+#
+# PREREQUISITE: the package must be resolvable by the DSH host — installed via
+#     npm install @0123896/dsh-notify-sounds     (published), or
+#     npm link @0123896/dsh-notify-sounds        (local, from this repo)
+# Until the package is installed the preset will not mount.
+#
+# This is an AGENT-PLANE composition. The plugin row below only CONSUMES host
+# services (fs, webServer) and the DSH runtime events; it publishes no service,
+# so it sits loose in the agent scope and needs no isolate realm.
+
+# ── notify sounds ────────────────────────────────────────────────────────────
+- id: dsh-notify-sounds
+  name: '@0123896/dsh-notify-sounds'
+  # Optional per-machine custom sound files (omit to use the built-in Web Audio
+  # tone from the browser half):
+  # config:
+  #   endFilePath: 'C:/path/end.mp3'
+  #   approvalFilePath: 'F:/path/approval.mp3'
