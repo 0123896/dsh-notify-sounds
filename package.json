@@ -1,7 +1,7 @@
 {
   "name": "@0123896/dsh-notify-sounds",
   "version": "1.0.0",
-  "description": "DSH (DeepSeek Harness) Cordis plugin: play a distinct notification sound when the assistant finishes a reply, and another when the user needs to confirm / answer a question.",
+  "description": "DSH (DeepSeek Harness) plugin: play a distinct notification sound when the assistant finishes a reply, and another when the user needs to confirm / answer a question.",
   "license": "MIT",
   "author": "0123896",
   "homepage": "https://github.com/0123896/dsh-notify-sounds",
@@ -12,31 +12,49 @@
   "keywords": [
     "deepseek-harness",
     "dsh",
+    "dsh-plugin",
     "cordis",
     "plugin",
     "notify",
     "audio",
     "sound",
-    "beep",
-    "toast"
+    "beep"
   ],
-  "engines": {
-    "node": ">=18"
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
   },
-  "main": "src/index.js",
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0-rc.2"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  },
   "files": [
-    "src",
-    "preset",
+    "lib",
+    "cordis.patch.yml",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
     "CONTRIBUTING.md"
   ],
-  "scripts": {
-    "lint": "echo \"lint passes (no bundler; plain JS)\" && exit 0",
-    "test": "echo \"no automated tests\" && exit 0"
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "*"
+    "@deepseek-ai/cordis": "^4.0.2"
+  },
+  "scripts": {
+    "test": "echo \"no automated tests\" && exit 0"
   }
 }

@@ -24,4 +24,3 @@ Thumbs.db
 *.mp3
 *.wav
 *.ogg
-!dsh-notify-sounds/**/keep.*

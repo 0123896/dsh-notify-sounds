@@ -44,7 +44,7 @@ Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**
 | 提问 / 审批提醒 | 无 | 请求确认时即响（`approval`） |
 | 自定义提示音 | — | 支持（URL / 本地文件） |
 | 内置音频 / 版权风险 | — | 无（默认 Web Audio 合成） |
-| 侵入源码 | — | 否（官方动态 Cordis 插件） |
+| 侵入源码 | — | 否（官方 profile bundle 插件） |
 
 ### 触发时机对照表
 
@@ -54,7 +54,7 @@ Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**
 | 需确认 / 提问 / 审批 | `tools/pre-execute` 决策为 `ask` 或工具名为 `ask_user_question` | 🚨 `approval` |
 
 > 探测都发生在插件 **Host 端（事件检测）**，声音统一在**浏览器（client）**播放；
-> 两者通过插件私有 RPC：`host.call('notif-drain')`，客户端每 400 ms 轮询一次，
+> 两者通过同源 HTTP 路由协作：host 半提供 `/notify-sounds/drain`，客户端每 400 ms 轮询一次，
 > 并对同一类事件在短窗口内去重（`approval` 为 2.5s），避免重复。
 
 ---
@@ -76,53 +76,59 @@ Cordis 运行时开发。它会在**两种关键时刻发出不同的提示音**
 
 ## 快速上手
 
-插件**不需要安装到 npm**，用 DSH 的动态 Cordis 机制，在会话里直接粘入两个 body 即可：
+本插件是一个**标准 DSH profile 插件包**（bundle）：装进 profile 后随 DSH 启动自动挂载，
+**重启依然生效**，不需要每次粘贴源码，也不用发布到 npm（本地 `link:` 即可）。
 
-在运行中的 **DSH 会话**里，用 `cordis_define` 工具：
+### 安装
 
-1. 打开仓库里的 **[`src/host.js`](src/host.js)**，把**全文**复制为 `code.host`。
-2. 打开 **[`src/client.js`](src/client.js)**，把**全文**复制为 `code.client`。
-3. 调用 `cordis_define`，再把返回的 `pluginId` / `packageId` 用 `cordis_run`（`mode=run`）激活。首次会在浏览器弹激活确认，如实批准。
+```bash
+# 1) 把插件注册为 profile 依赖（本地目录用 link:，也可换成已发布的版本号）
+#    编辑 $DSH_HOME/profiles/<profile>/package.json：
+#      "dependencies": { "@0123896/dsh-notify-sounds": "link:D:/path/to/dsh-notify-sounds" }
+#      "dsh": { "profile": { "bundles": [ ... , "@0123896/dsh-notify-sounds" ] } }
 
-完整调用示例：
-
-```
-code: {
-  host:   <将 src/host.js 全文粘贴到这里>,
-  client: <将 src/client.js 全文粘贴到这里>,
-}
-name: "@0123896/dsh-notify-sounds"
-purpose: "会话结束 / 提问或审批时播放提示音"
-plugin: { kind: "new", idPrefix: "notif" }
+# 2) 安装依赖，让包进入 profile 的 node_modules
+dsh plugin --profile web install
 ```
 
-> 说明：插件依赖 DSH 动态 Cordis 的 host/client 机制，需要“粘码”这两个 body，
-> 这也是目前唯一靠谱的安装方式；不涉及 npm、不用改源码。
+### 生效
+
+`dsh plugin ... install` 之后**重启 DSH**（新增 bundle 需要重新加载组合树），
+插件就会自动挂载：host 半负责事件检测与 `/notify-sounds/*` 路由，浏览器半由
+`dsh.client` 清单自动加载进页面。
 
 ### 首次使用测试
 
-1. 激活成功后，让模型正常**回复一条消息** → 应听到“结束”音（`end`）。
+1. 让模型正常**回复一条消息** → 应听到“结束”音（`end`）。
 2. 触发一次**提问 / 审批** → 应听到“确认”音（`approval`）。
 3. 若完全没响：多半是浏览器**自动播放策略**拦截。先在页面任意处**点一下**建立一次
    用户手势，再触发；仍无效请看 [常见问题](#常见问题)。
+
+### 工作原理（两半如何协作）
+
+| 半 | 位置 | 职责 |
+| --- | --- | --- |
+| host | `lib/index.js`（DSH Node 进程） | 监听 `agent/turn-stopping` 与 `tools/pre-execute` 的 `ask` 决策，维护待播队列，注册 `/notify-sounds/drain` 与声音文件路由 |
+| client | `lib/client.js`（浏览器） | 每 400 ms 轮询 `/notify-sounds/drain`，播放提示音（默认 Web Audio 合成） |
+
+`package.json` 的 `dsh` 字段声明了 `bundle.patch`（组合补丁）与 `client.platform`
+（浏览器半）；`cordis.patch.yml` 只插入一行 host 插件行。
 
 ---
 
 ## 自定义声音
 
-给 `apply` 传配置：
+在 profile 的组合里给该行传 `config`（`cordis.patch.yml` 或 profile 的 patch 层）：
 
-```js
-// host 侧：指定本地声音文件，插件经 webServer 以 /__dsh-notify/ 提供
-{ endFilePath: 'C:/path/end.mp3', approvalFilePath: 'C:/path/approval.mp3' }
-
-// client 侧：直接用一个 URL 播放（file 或 http）
-{ endUrl: '/__dsh-notify/end.mp3', approvalUrl: '/__dsh-notify/approval.mp3' }
+```yaml
+- id: dsh-notify-sounds
+  name: '@0123896/dsh-notify-sounds'
+  config:
+    endFilePath: 'C:/path/end.mp3'        # 由 host 半以 /notify-sounds/end.mp3 提供
+    approvalFilePath: 'C:/path/approval.mp3'
 ```
 
-给了 `url` 就播放文件，否则合成蜂鸣。改动后重启插件即可生效。
-
-不自定义时，常用参数交给 client：
+浏览器半若拿到 URL 就播放该文件，否则用 Web Audio 合成蜂鸣。常用参数：
 
 | Config | 默认 | 含义 |
 | --- | --- | --- |
@@ -131,30 +137,32 @@ plugin: { kind: "new", idPrefix: "notif" }
 | `approvalFrequency` | `660` | “确认”音的频率（Hz） |
 | `approvalDurationMs` | `420` | “确认”音时长 |
 
+> 不传任何配置也能用：默认音由浏览器实时合成，仓库里不含任何音频文件。
+
 ---
 
 ## 常见问题
 
 **为什么提问没有立刻响？**
-浏览器可能拦截了自动播放，先在页面点一下；再确认插件已激活（`cordis_run` 成功）。
+浏览器可能拦截了自动播放，先在页面点一下；再确认插件已随 profile 挂载（重启 DSH 后生效）。
 
 **为什么“审批”和“提问”是同一个音？**
 是刻意如此——都代表“需要你确认”，用同一段 `approval`，方便你形成记忆。
 
 **我能用别人的 MP3 吗？**
-可以，通过 `url` / `filePath` 指向你的文件；但**不要把有版权的音频随仓库分发**，
+可以，通过 `endFilePath` / `approvalFilePath` 指向你的文件；但**不要把有版权的音频随仓库分发**，
 避免侵权。默认的 Web Audio 蜂鸣无任何版权问题。
 
 **它会影响 DSH 本体吗？**
-不会。它只靠官方动态插件机制（事件 + 私有 RPC），不修改源码、不侵入服务。
+不会。它只用官方 bundle 机制（`dsh.bundle.patch` + `dsh.client`）与公开事件/路由，不修改源码。
 
 ---
 
 ## 已知限制
 
 - 依赖**浏览器侧** Web Audio，受浏览器自动播放策略影响（首次需一次用户手势）。
-- **host 端**在受限沙箱：只能访问 `inject` 声明过的服务（本插件 host：`fs`、
-  `webServer`；client：`timer`）。
+- host 半 `inject` 只声明 `webServer`（`fs` 仅在提供自定义声音文件时按需取用）。
+- 新增 bundle 后需**重启 DSH** 才会挂载（组合树在启动时组装）。
 - 同一类事件在短窗口会**合并成一次**（去重），可能少打一次音（避免回响）。
 - 徽章依赖 shields.io 渲染，离线 / 无网络时不显示（不影响功能）。
 

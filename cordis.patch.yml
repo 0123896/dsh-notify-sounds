@@ -1,0 +1,21 @@
+# @0123896/dsh-notify-sounds bundle patch.
+#
+# Applied over the dsh-web-app layer. This bundle contributes ONE host row: the
+# plugin that watches the two notification moments and serves the drain route
+# the browser half polls. The browser half itself is loaded from this package's
+# `dsh.client` manifest (package.json) via the "./client" export.
+#
+# Only additive `insert` rows appear here: a patch replaces the targeted row's
+# whole `config`, and this bundle overrides no shipped row.
+
+- insert:
+    # Host half: `inject = ['webServer']` in lib/index.js, so the Loader waits
+    # for the HTTP server before mounting; a headless profile without one simply
+    # does not load this bundle.
+    - id: dsh-notify-sounds
+      name: '@0123896/dsh-notify-sounds'
+      # Optional per-machine custom sounds (omit to use the built-in Web Audio
+      # tones synthesized by the browser half):
+      # config:
+      #   endFilePath: 'C:/path/end.mp3'
+      #   approvalFilePath: 'C:/path/approval.mp3'
