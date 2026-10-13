@@ -118,17 +118,19 @@ dsh plugin --profile web install
 
 ## 自定义声音
 
-在 profile 的组合里给该行传 `config`（`cordis.patch.yml` 或 profile 的 patch 层）：
+只需要在**一处**配置本地文件的路径——在 profile 的组合里给该插件行传 `config`
+（插进 profile 的 `cordis.patch.yml`，或在 `cordis.patch.yml` 里改这一行）：
 
 ```yaml
 - id: dsh-notify-sounds
   name: '@0123896/dsh-notify-sounds'
   config:
-    endFilePath: 'C:/path/end.mp3'        # 由 host 半以 /notify-sounds/end.mp3 提供
+    endFilePath: 'C:/path/end.mp3'        # host 半以 /notify-sounds/end.mp3 提供
     approvalFilePath: 'C:/path/approval.mp3'
 ```
 
-浏览器半若拿到 URL 就播放该文件，否则用 Web Audio 合成蜂鸣。常用参数：
+配置了路径后，host 半会在轮询响应里带上这两个 URL，浏览器半自动改用它们播放；
+不配置则用 Web Audio 实时合成蜂鸣。常用音调参数：
 
 | Config | 默认 | 含义 |
 | --- | --- | --- |
